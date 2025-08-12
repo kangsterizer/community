@@ -1,0 +1,14 @@
+# manifest.yaml
+
+id: lyftbikes
+name: Lyft bikes
+summary: Lyft bikes status
+desc: Display Lyft bikes status
+author: kangsterizer
+schema:
+  fields:
+    - id: display_schedule
+      name: Display Schedule
+      type: schedule
+      icon: clock
+      desc: Set the schedule for when this app should be visible.
