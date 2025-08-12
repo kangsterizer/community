@@ -1,9 +1,10 @@
-# manifest.yaml
-
+---
 id: lyftbikes
-name: Lyft bikes
+fileName: lyft.star
+packageName: lyftbikes
+name: Lyft Bikes
 summary: Lyft bikes status
-desc: Display Lyft bikes status
+desc: Display Lyft bikes status.
 author: kangsterizer
 schema:
   fields:

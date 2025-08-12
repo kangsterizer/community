@@ -5,11 +5,11 @@ Description: Multi-dock display of available Lyft bikes, supporting different re
 Author: Guillaume Destuynder
 """
 
-load("render.star", "render")
-load("http.star", "http")
 load("encoding/base64.star", "base64")
-load("time.star", "time")
+load("http.star", "http")
+load("render.star", "render")
 load("schema.star", "schema")
+load("time.star", "time")
 
 BIKE_ICON = base64.decode("""
 iVBORw0KGgoAAAANSUhEUgAAABAAAAAKCAYAAAC9vt6cAAAAAXNSR0IArs4c6QAAAVhJREFUKFNN
@@ -52,7 +52,7 @@ def get_station_info(area_code, station_sn):
     resp = http.get(station_information_url, ttl_seconds = 86400)
     if resp.status_code != 200:
         fail("HTTP error: %d", resp.status_code)
-        return station_info
+
     info = resp.json()["data"]["stations"]
     for station in info:
         if station["short_name"] == station_sn:
@@ -65,7 +65,6 @@ def get_station_info(area_code, station_sn):
     resp = http.get(station_status_url, ttl_seconds = 120)
     if resp.status_code != 200:
         fail("HTTP error: %d", resp.status_code)
-        return station_info
 
     data = resp.json()["data"]["stations"]
     for station in data:
@@ -80,10 +79,16 @@ def get_station_info(area_code, station_sn):
     return station_info
 
 def main(config):
+    # Scheduler
+    should_display = config.get("display_schedule")
+    if not should_display:
+        return None
+
     # Ex bay
     area_code = config.get("area_code")
     if area_code == None:
         area_code = "bay"
+
     # Ex SF-B19, SF-A20
     station_ids = {}
     station_ids[config.get("station_one")] = config.get("station_one_text")
@@ -94,16 +99,17 @@ def main(config):
     stations = []
 
     # Icon strip
-    stations.append(render.Row(
-        cross_align="end",
-        main_align="space_between",
-        expanded=True,
-        children=[
-                  render.Box(child=render.Image(src=BIKE_ICON, width=8, height=8), width=8, height=8, padding=0),
-                  render.Box(width=35-8, height=8, padding=0),
-                  render.Image(src=LT_ICON, width=7, height=7),
-                  render.Image(src=WDROP_ICON, width=7, height=7)
-                  ]
+    stations.append(
+        render.Row(
+            cross_align = "end",
+            main_align = "space_between",
+            expanded = True,
+            children = [
+                render.Box(child = render.Image(src = BIKE_ICON, width = 8, height = 8), width = 8, height = 8, padding = 0),
+                render.Box(width = 35 - 8, height = 8, padding = 0),
+                render.Image(src = LT_ICON, width = 7, height = 7),
+                render.Image(src = WDROP_ICON, width = 7, height = 7),
+            ],
         ),
     )
 
@@ -115,71 +121,78 @@ def main(config):
 
         # Station human short name (hsn) must be 8 max len (40px) to fit in the display without scrolling
         station_hsn = station_ids[station_id][:8]
+
         # Pad the text so that it's well aligned
-        pad = 35-len(station_hsn)*5
-        if pad  < 0: pad = 0
+        pad = 35 - len(station_hsn) * 5
+        if pad < 0:
+            pad = 0
 
         print(station_info)
+
         # Stations
-        stations.append(render.Row(
+        stations.append(
+            render.Row(
                 children = [
-                            render.Box(child=render.Text(station_hsn, color="#fa0"),
-                                       width=len(station_hsn)*5, height=8),
-                            render.Box(width=1+pad, height=8),
-                            render.Text(str(station_info["ebikes"]), color="#ff4"),
-                            render.Text(str(station_info["bikes"]), color="#ccc")
-                            ],
-                expanded=True,
-                cross_align="end",
-                main_align="space_between"
-                )
+                    render.Box(
+                        child = render.Text(station_hsn, color = "#fa0"),
+                        width = len(station_hsn) * 5,
+                        height = 8,
+                    ),
+                    render.Box(width = 1 + pad, height = 8),
+                    render.Text(str(station_info["ebikes"]), color = "#ff4"),
+                    render.Text(str(station_info["bikes"]), color = "#ccc"),
+                ],
+                expanded = True,
+                cross_align = "end",
+                main_align = "space_between",
+            ),
         )
 
     return render.Root(
         child = render.Column(
-            cross_align="end",
-            children=stations
-        )
+            cross_align = "end",
+            children = stations,
+        ),
     )
 
 def get_schema():
     return schema.Schema(
-    version = "1",
-    fields = [
-        schema.Text(
-            id = "area_code",
-            name = "Area Code",
-            desc = "Area Code for your location (e.g. bay)",
-            icon = "map",
-            default = "bay"
-        ),
-        schema.Text(
-            id = "station_one",
-            name = "Bay Wheels Station short name 1",
-            desc = "A Bay Wheels station short name",
-            icon = "bicyle",
-            default = "SF-A19"
-        ),
-        schema.Text(
-            id = "station_one_text",
-            name = "Bay Wheels Station short name 1",
-            desc = "A Bay Wheels station short name",
-            icon = "bicyle",
-            default = "Home"
-        ),
-        schema.Text(
-            id = "station_two",
-            name = "Bay Wheels Station short name 2",
-            desc = "A Bay Wheels station short name",
-            icon = "bicyle",
-            default = "SF-A20"
-        ),
-        schema.Text(
-            id = "station_two_text",
-            name = "Bay Wheels Station short name 1",
-            desc = "A Bay Wheels station short name",
-            icon = "bicyle",
-            default = "Safeway"
-        ),
-    ],
-)
+        version = "1",
+        fields = [
+            schema.Text(
+                id = "area_code",
+                name = "Area Code",
+                desc = "Area Code for your location (e.g. bay)",
+                icon = "map",
+                default = "bay",
+            ),
+            schema.Text(
+                id = "station_one",
+                name = "Bay Wheels Station short name 1",
+                desc = "A Bay Wheels station short name",
+                icon = "bicycle",
+                default = "SF-A19",
+            ),
+            schema.Text(
+                id = "station_one_text",
+                name = "Bay Wheels Station short name 1",
+                desc = "A Bay Wheels station short name",
+                icon = "bicycle",
+                default = "Home",
+            ),
+            schema.Text(
+                id = "station_two",
+                name = "Bay Wheels Station short name 2",
+                desc = "A Bay Wheels station short name",
+                icon = "bicycle",
+                default = "SF-A20",
+            ),
+            schema.Text(
+                id = "station_two_text",
+                name = "Bay Wheels Station short name 1",
+                desc = "A Bay Wheels station short name",
+                icon = "bicycle",
+                default = "Safeway",
+            ),
+        ],
+    )
